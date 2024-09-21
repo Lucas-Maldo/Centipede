@@ -1,11 +1,4 @@
-'''
-Author: David Feng
-  
-  Date: May 29, 2017
-  
-  Description: This file contains the Class Sprites for my Centipede Game.
 
-'''
 
 import pygame
 import random
@@ -26,6 +19,13 @@ class Player(pygame.sprite.Sprite):
         self.__dy = 4
         self.__killed = False
         self.__level = level
+        self.__speed_boost = 0
+        self.__rapid_fire = 0
+        self.__normal_fire_rate = 400
+        self.__rapid_fire_rate = 200  
+        self.__last_shot_time = 0
+        self.__multi_directional = 0
+        self.__normal_speed = self.__dx
 
         # Instance variables to control the animation
         self.__animate = []
@@ -80,16 +80,51 @@ class Player(pygame.sprite.Sprite):
         for num in range(1, 9):
             self.__animate.append(pygame.image.load("Blue Sprites/death" + str(num) + ".png"))
 
+    def set_speed_boost(self, duration):
+        self.__speed_boost = pygame.time.get_ticks() + duration
+        self.__dx = self.__normal_speed * 2
+        self.__dy = self.__normal_speed * 2
+    
+    def set_rapid_fire(self, duration):
+        self.__rapid_fire = pygame.time.get_ticks() + duration
+    
+    def can_shoot(self):
+        now = pygame.time.get_ticks()
+        if now - self.__last_shot_time >= (self.__rapid_fire_rate if self.__rapid_fire > now else self.__normal_fire_rate):
+            self.__last_shot_time = now
+            return True
+        return False
+    
+    def set_multi_directional(self, duration):
+        self.__multi_directional = pygame.time.get_ticks() + duration
+
+    def is_multi_directional(self):
+        return pygame.time.get_ticks() < self.__multi_directional
+
+    def shoot(self):
+        bullets = []
+        if self.is_multi_directional():
+            directions = [(0, -1), (-1, 0), (1, 0)]  # Up, Left, Right
+        else:
+            directions = [(0, -1)]  # Only Up
+
+        for direction in directions:
+            bullet = Bullet(self.rect.center, self.__level, direction)
+            bullets.append(bullet)
+        
+        return bullets
+
     def update(self):
         '''This method will be called automatically to reposition the player 
         sprite on the screen and to switch images for death animation.'''
 
-        now = pygame.time.get_ticks()
+        
+        current_time = pygame.time.get_ticks()
         # If statement checks if the player has been killed
         if self.__killed:
             # If statement causes the death images to switch every 0.1 seconds
-            if now - self.__last >= self.__intervals:
-                self.__last = now
+            if current_time - self.__last >= self.__intervals:
+                self.__last = current_time
                 self.__index += 1
                 # If statement kills the sprite when the death animation is finished
                 if self.__index >= len(self.__animate):
@@ -110,10 +145,17 @@ class Player(pygame.sprite.Sprite):
         # right
         if self.rect.right >= self.__screen.get_width():
             self.rect.right = self.__screen.get_width()
+        
+        # Check if speed boost has expired
+        if current_time > self.__speed_boost:
+            self.__dx = self.__normal_speed
+            self.__dy = self.__normal_speed
+
+        
 
 class Bullet(pygame.sprite.Sprite):
     '''This class defines the sprite for the bullet.'''
-    def __init__(self, center, level):
+    def __init__(self, center, level, direction):
         '''This initializer takes the center of the player sprite and level as 
         parameters. It initializes the image and rect attributes and y vector 
         for the bullet.'''
@@ -122,18 +164,24 @@ class Bullet(pygame.sprite.Sprite):
         # Instance variables to keep track of the player center, y vector 
         # and level
         self.__center = center
-        self.__dy = -15
+        self.__dx, self.__dy = direction
+        self.__speed = 15
         self.__level = level
 
         # Colour of the sprites are different depending on level
         # Sets the image and rect attributes for the bullet
-        if self.__level == 1:
-            self.image = pygame.image.load("Green Sprites/greenbullet.png")
-        elif self.__level == 2:
-            self.image = pygame.image.load("Blue Sprites/bullet.png")
+        if self.__dx != 0:
+            if self.__level == 1:
+                self.image = pygame.image.load("Green Sprites/greenbullethorizontal.png")
+            elif self.__level == 2:
+                self.image = pygame.image.load("Blue Sprites/bullethorizontal.png")
+        else:
+            if self.__level == 1:
+                self.image = pygame.image.load("Green Sprites/greenbullet.png")
+            elif self.__level == 2:
+                self.image = pygame.image.load("Blue Sprites/bullet.png")
 
         self.rect = self.image.get_rect()
-
         self.rect.center = self.__center
 
     def change_level(self):
@@ -141,11 +189,12 @@ class Bullet(pygame.sprite.Sprite):
         self.__level = 2
 
     def update(self):
-        '''This method will be automatically called to reposition the bullet and
-        kill it if it goes past the screen.'''
-
-        self.rect.centery += self.__dy
-        if self.rect.bottom <= 0:
+        self.rect.x += self.__dx * self.__speed
+        self.rect.y += self.__dy * self.__speed
+        if (self.rect.bottom <= 0 or 
+            self.rect.top >= pygame.display.get_surface().get_height() or
+            self.rect.left <= 0 or 
+            self.rect.right >= pygame.display.get_surface().get_width()):
             self.kill()
 
 class Centipede(pygame.sprite.Sprite):
@@ -628,3 +677,37 @@ class Highscore(pygame.sprite.Sprite):
     def change_level(self):
         '''This method changes the colour of the highscore label.'''
         self.__colour = (51, 216, 232)
+        
+class PowerUp(pygame.sprite.Sprite):
+    
+    def __init__(self, position):
+        
+        pygame.sprite.Sprite.__init__(self)
+        
+        self.__types = ['speed', 'rapid_fire', 'multi_directional']
+        self.__type = random.choice(self.__types)
+        self.__duration = 5000  # 5 seconds
+        
+        # Load the image based on the power-up type
+        self.image = pygame.image.load(f"PowerUps/{self.__type}.png")
+        self.rect = self.image.get_rect()
+        self.rect.center = position
+        
+        # Movement
+        self.__dy = 2
+        
+    def get_type(self):
+        '''Returns the type of the power-up.'''
+        return self.__type
+    
+    def get_duration(self):
+        '''Returns the duration of the power-up effect.'''
+        return self.__duration
+    
+    def update(self):
+        '''Move the power-up down the screen.'''
+        self.rect.y += self.__dy
+        
+        # Remove if it goes off the screen
+        if self.rect.top > pygame.display.get_surface().get_height():
+            self.kill()

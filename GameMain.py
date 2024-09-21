@@ -1,14 +1,5 @@
-'''
-Author: David Feng
-  
-  Date: May 30, 2017
-  
-  Description: This program is remake of the Atari game, Centipede. 
-
-'''
-
 # I - IMPORT AND INITIALIZE
-import pygame, GameSprites
+import pygame, GameSprites, random
 pygame.init()
 pygame.mixer.init()
 
@@ -62,9 +53,10 @@ def game():
     lifeGroup = pygame.sprite.Group(lives)
     spiderGroup = pygame.sprite.Group()
     fleaGroup = pygame.sprite.Group()
+    powerupGroup = pygame.sprite.Group()
 
     allSprites = pygame.sprite.OrderedUpdates(player, bodyGroup, scorekeeper, \
-        highscore, lifeGroup, mushroomGroup, bullets, spiderGroup, fleaGroup)
+        highscore, lifeGroup, mushroomGroup, bullets, spiderGroup, fleaGroup, powerupGroup)
     
     # "Game Over" Image to display after game loop terminates
     font = pygame.font.Font("ARCADECLASSIC.TTF", 100)
@@ -124,21 +116,20 @@ def game():
         # If statement checks if the player has been killed
         if death == False:
             pressed  = pygame.key.get_pressed()
-            if pressed[273]:
+            if pressed[pygame.K_UP]:
                 player.move_up()
-            elif pressed[274]:
+            elif pressed[pygame.K_DOWN]:
                 player.move_down()
-            elif pressed[275]:
+            elif pressed[pygame.K_RIGHT]:
                 player.move_right()
-            elif pressed[276]:
+            elif pressed[pygame.K_LEFT]:
                 player.move_left()
             # Checks if the player pressed the spacebar and no other bullets are on the screen   
-            if pressed[pygame.K_SPACE] and len(bullets) <= 0:             
+            if pressed[pygame.K_SPACE] and player.can_shoot():
                 shoot.play()
-                # Creates a bullet and adds it into sprite groups                    
-                missile = GameSprites.Bullet(player.rect.center, level)
-                bullets.add(missile)
-                allSprites.add(bullets)                
+                new_bullets = player.shoot()
+                bullets.add(new_bullets)
+                allSprites.add(new_bullets)          
           
         # Centipede with Player Collision
         for body in bodyGroup:
@@ -174,15 +165,17 @@ def game():
         for bullet in bullets:
             mushroom_hit = pygame.sprite.spritecollide(bullet, mushroomGroup, False)
             if mushroom_hit:
-                # Kills the bullet sprite 
                 bullet.kill()
-                # Lowers the mushroom hit point by 1 and changes the sprite image 
                 mushroom_hit[0].mushroom_hitpoint()
                 mushroom_hit[0].mushroom_kill(mushroom_hit[0])
-                # Checks if the mushroom is killed
                 if mushroom_hit[0].get_hitpoint() == 0:
                     killed.play()
                     scorekeeper.add_score(mushroom_hit[0].get_point_value())
+                    # Chance to spawn a power-up
+                    if random.random() < 0.7:  # 10% chance
+                        powerup = GameSprites.PowerUp(mushroom_hit[0].rect.center)
+                        powerupGroup.add(powerup)
+                        allSprites.add(powerup)
 
         # Player with Mushroom Collision
         player_mushroom_hit = pygame.sprite.spritecollide(player, mushroomGroup, False)
@@ -228,6 +221,19 @@ def game():
             dead.play()
             death = True
             player.set_killed()
+            
+        # Player with PowerUp Collision
+        powerup_hit = pygame.sprite.spritecollide(player, powerupGroup, True)
+        if powerup_hit:
+            powerup_type = powerup_hit[0].get_type()
+            powerup_duration = powerup_hit[0].get_duration()
+            if powerup_type == 'speed':
+                player.set_speed_boost(powerup_duration)
+            elif powerup_type == 'rapid_fire':
+                player.set_rapid_fire(powerup_duration)
+            elif powerup_type == 'multi_directional':
+                player.set_multi_directional(powerup_duration)
+
 
         # Bullet with Flea Collision
         for bullet in bullets:
