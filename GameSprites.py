@@ -26,6 +26,7 @@ class Player(pygame.sprite.Sprite):
         self.__last_shot_time = 0
         self.__multi_directional = 0
         self.__normal_speed = self.__dx
+        self.__penetrating = 0
 
         # Instance variables to control the animation
         self.__animate = []
@@ -101,6 +102,12 @@ class Player(pygame.sprite.Sprite):
     def is_multi_directional(self):
         return pygame.time.get_ticks() < self.__multi_directional
 
+    def set_penetrating(self, duration):
+        self.__penetrating = pygame.time.get_ticks() + duration
+
+    def is_penetrating(self):
+        return pygame.time.get_ticks() < self.__penetrating
+
     def shoot(self):
         bullets = []
         if self.is_multi_directional():
@@ -109,7 +116,7 @@ class Player(pygame.sprite.Sprite):
             directions = [(0, -1)]  # Only Up
 
         for direction in directions:
-            bullet = Bullet(self.rect.center, self.__level, direction)
+            bullet = Bullet(self.rect.center, self.__level, direction, self.is_penetrating())
             bullets.append(bullet)
         
         return bullets
@@ -155,7 +162,7 @@ class Player(pygame.sprite.Sprite):
 
 class Bullet(pygame.sprite.Sprite):
     '''This class defines the sprite for the bullet.'''
-    def __init__(self, center, level, direction):
+    def __init__(self, center, level, direction, penetrating=False):
         '''This initializer takes the center of the player sprite and level as 
         parameters. It initializes the image and rect attributes and y vector 
         for the bullet.'''
@@ -167,6 +174,7 @@ class Bullet(pygame.sprite.Sprite):
         self.__dx, self.__dy = direction
         self.__speed = 15
         self.__level = level
+        self.__penetrating = penetrating
 
         # Colour of the sprites are different depending on level
         # Sets the image and rect attributes for the bullet
@@ -187,6 +195,9 @@ class Bullet(pygame.sprite.Sprite):
     def change_level(self):
         '''This method changes the level instance variable to 2.'''
         self.__level = 2
+
+    def is_penetrating(self):
+        return self.__penetrating
 
     def update(self):
         self.rect.x += self.__dx * self.__speed
@@ -684,7 +695,7 @@ class PowerUp(pygame.sprite.Sprite):
         
         pygame.sprite.Sprite.__init__(self)
         
-        self.__types = ['speed', 'rapid_fire', 'multi_directional']
+        self.__types = ['speed', 'rapid_fire', 'multi_directional', 'penetrating']
         self.__type = random.choice(self.__types)
         self.__duration = 5000  # 5 seconds
         

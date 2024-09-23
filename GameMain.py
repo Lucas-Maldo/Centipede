@@ -156,16 +156,15 @@ def game():
                     mushroom = GameSprites.Mushroom(centipede.rect.topleft, level)
                     mushroomGroup.add(mushroom)
                     allSprites.add(mushroomGroup)
-                    # Kills the bullet sprite
-                    bullet.kill()
                     # Adds the point value of the centipede body to the score
                     scorekeeper.add_score(centipede.get_point_value())
+                    if not bullet.is_penetrating():
+                        bullet.kill()
                             
         # Bullet with Mushroom Collision
         for bullet in bullets:
             mushroom_hit = pygame.sprite.spritecollide(bullet, mushroomGroup, False)
             if mushroom_hit:
-                bullet.kill()
                 mushroom_hit[0].mushroom_hitpoint()
                 mushroom_hit[0].mushroom_kill(mushroom_hit[0])
                 if mushroom_hit[0].get_hitpoint() == 0:
@@ -176,6 +175,10 @@ def game():
                         powerup = GameSprites.PowerUp(mushroom_hit[0].rect.center)
                         powerupGroup.add(powerup)
                         allSprites.add(powerup)
+                
+                if not bullet.is_penetrating():
+                    bullet.kill()
+
 
         # Player with Mushroom Collision
         player_mushroom_hit = pygame.sprite.spritecollide(player, mushroomGroup, False)
@@ -233,6 +236,8 @@ def game():
                 player.set_rapid_fire(powerup_duration)
             elif powerup_type == 'multi_directional':
                 player.set_multi_directional(powerup_duration)
+            elif powerup_type == 'penetrating':
+                player.set_penetrating(powerup_duration)
 
 
         # Bullet with Flea Collision
