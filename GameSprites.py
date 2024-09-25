@@ -729,8 +729,6 @@ class PowerUp(pygame.sprite.Sprite):
         
         if not self.__animate:
             raise ValueError(f"No frames found for power-up type: {self.__type}")
-        
-        print(f'El largo es {len(self.__animate)}, del power {self.__type}')
 
     
     def get_type(self):
