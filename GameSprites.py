@@ -2,6 +2,7 @@
 
 import pygame
 import random
+import os
 
 class Player(pygame.sprite.Sprite):
     '''This class defines the sprite for the player.'''
@@ -692,21 +693,46 @@ class Highscore(pygame.sprite.Sprite):
 class PowerUp(pygame.sprite.Sprite):
     
     def __init__(self, position):
-        
         pygame.sprite.Sprite.__init__(self)
         
         self.__types = ['speed', 'rapid_fire', 'multi_directional', 'penetrating']
         self.__type = random.choice(self.__types)
         self.__duration = 5000  # 5 seconds
         
-        # Load the image based on the power-up type
-        self.image = pygame.image.load(f"PowerUps/{self.__type}.png")
+        # Animation setup
+        self.__animate = []
+        self.__frame_index = 0
+        self.__last_update = pygame.time.get_ticks()
+        self.__frame_rate = 100  # Milliseconds between frame changes
+
+        # Load animation frames
+        self.__load_frames()
+        
+        self.image = self.__animate[0]
         self.rect = self.image.get_rect()
         self.rect.center = position
         
         # Movement
         self.__dy = 2
+    
+    def __load_frames(self):
+        '''Load all available frames for the power-up type.'''
+        i = 0
+        while True:
+            frame_path = f"PowerUps/{self.__type}_{i}.png"
+            if os.path.exists(frame_path):
+                frame = pygame.image.load(frame_path)
+                self.__animate.append(frame)
+                i += 1
+            else:
+                break
         
+        if not self.__animate:
+            raise ValueError(f"No frames found for power-up type: {self.__type}")
+        
+        print(f'El largo es {len(self.__animate)}, del power {self.__type}')
+
+    
     def get_type(self):
         '''Returns the type of the power-up.'''
         return self.__type
@@ -716,9 +742,17 @@ class PowerUp(pygame.sprite.Sprite):
         return self.__duration
     
     def update(self):
-        '''Move the power-up down the screen.'''
+        '''Update the power-up's position and animate it.'''
+        # Move the power-up down
         self.rect.y += self.__dy
         
         # Remove if it goes off the screen
         if self.rect.top > pygame.display.get_surface().get_height():
             self.kill()
+
+        # Handle animation
+        now = pygame.time.get_ticks()
+        if now - self.__last_update > self.__frame_rate:
+            self.__last_update = now
+            self.__frame_index = (self.__frame_index + 1) % len(self.__animate)
+            self.image = self.__animate[self.__frame_index]

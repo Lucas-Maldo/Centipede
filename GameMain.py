@@ -232,7 +232,7 @@ def game():
             powerup_duration = powerup_hit[0].get_duration()
             if powerup_type == 'speed':
                 player.set_speed_boost(powerup_duration)
-            elif powerup_type == 'rapid_fire':
+            if powerup_type == 'rapid_fire':
                 player.set_rapid_fire(powerup_duration)
             elif powerup_type == 'multi_directional':
                 player.set_multi_directional(powerup_duration)
