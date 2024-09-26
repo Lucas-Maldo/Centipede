@@ -149,14 +149,16 @@ def game():
         for bullet in bullets:
             centipede_hit = pygame.sprite.spritecollide(bullet, bodyGroup, True)
 
-            # Call hit() on the other centipede parts that are still in the game
-            for part in bodyGroup:
-                part.hit()  # This ensures all remaining centipede parts speed up
                 
             if centipede_hit:
                 # Loops through each centipede part in the centipede_hit list
                 for centipede in centipede_hit:
                     killed.play()
+                    
+                    # Call hit() on the other centipede parts that are still in the game
+                    for part in bodyGroup:
+                        part.hit()  # This ensures all remaining centipede parts speed up
+                        
                     # Creates a mushroom in place of the killed centipede body
                     mushroom = GameSprites.Mushroom(centipede.rect.topleft, level)
                     mushroomGroup.add(mushroom)
