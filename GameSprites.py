@@ -280,6 +280,15 @@ class Centipede(pygame.sprite.Sprite):
     def get_point_value(self):
         '''This method returns the point value of the Centipede.'''
         return self.__point_value
+    
+    def hit(self):
+        '''Accelerates the centipede by 5% when hit.'''
+        self.__dx *= 1.1  # Increases the speed by 10%
+        if self.__dx > 0:
+            self.__dx = min(self.__dx, 10)  # Set a max speed to avoid excessive acceleration
+        else:
+            self.__dx = max(self.__dx, -10)  # Ensure max speed for negative (left movement)
+
 
     def update(self):
         '''This method will be called automatically to change the image of the 
