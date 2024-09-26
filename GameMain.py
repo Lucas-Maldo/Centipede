@@ -158,6 +158,12 @@ def game():
                     allSprites.add(mushroomGroup)
                     # Adds the point value of the centipede body to the score
                     scorekeeper.add_score(centipede.get_point_value())
+                    
+                    # ----------- UPDATE: Speed up the remaining centipede when hit -----------
+                    # Call hit() on the other centipede parts that are still in the game
+                    for part in bodyGroup:
+                        part.hit()  # This ensures all remaining centipede parts speed up
+
                     if not bullet.is_penetrating():
                         bullet.kill()
                             
