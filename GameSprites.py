@@ -3,6 +3,17 @@
 import pygame
 import random
 import os
+import sys
+
+font_name = "Verdana"
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS  # When packaged by PyInstaller
+    except AttributeError:
+        base_path = os.path.abspath(".")  # When running as a script
+
+    return os.path.join(base_path, relative_path)
 
 class Player(pygame.sprite.Sprite):
     '''This class defines the sprite for the player.'''
@@ -41,13 +52,13 @@ class Player(pygame.sprite.Sprite):
         # Loads each death image for the player and the player sprite        
         if self.__level == 1:
             for num in range(1, 9):
-                self.__animate.append(pygame.image.load("Green Sprites/greendeath"+str(num)+".png"))
-            self.image = pygame.image.load("Green Sprites/greengun.png")
+                self.__animate.append(pygame.image.load(resource_path("sprites/Green Sprites/greendeath"+str(num)+".png")))
+            self.image = pygame.image.load(resource_path("sprites/Green Sprites/greengun.png"))
 
         elif self.__level == 2:
             for num in range(1, 9):
-                self.__animate.append(pygame.image.load("Blue Sprites/death" + str(num) + ".png"))
-            self.image = pygame.image.load("Blue Sprites/gun.png")
+                self.__animate.append(pygame.image.load(resource_path("sprites/Blue Sprites/death" + str(num) + ".png")))
+            self.image = pygame.image.load(resource_path("sprites/Blue Sprites/gun.png"))
 
         # Set rect attributes for the player
         self.rect = self.image.get_rect()
@@ -80,7 +91,7 @@ class Player(pygame.sprite.Sprite):
         self.__level = 2
         self.__animate = []
         for num in range(1, 9):
-            self.__animate.append(pygame.image.load("Blue Sprites/death" + str(num) + ".png"))
+            self.__animate.append(pygame.image.load(resource_path("sprites/Blue Sprites/death" + str(num) + ".png")))
 
     def set_speed_boost(self, duration):
         self.__speed_boost = pygame.time.get_ticks() + duration
@@ -130,6 +141,7 @@ class Player(pygame.sprite.Sprite):
         current_time = pygame.time.get_ticks()
         # If statement checks if the player has been killed
         if self.__killed:
+            print("player killed")
             # If statement causes the death images to switch every 0.1 seconds
             if current_time - self.__last >= self.__intervals:
                 self.__last = current_time
@@ -181,14 +193,14 @@ class Bullet(pygame.sprite.Sprite):
         # Sets the image and rect attributes for the bullet
         if self.__dx != 0:
             if self.__level == 1:
-                self.image = pygame.image.load("Green Sprites/greenbullethorizontal.png")
+                self.image = pygame.image.load(resource_path("sprites/Green Sprites/greenbullethorizontal.png"))
             elif self.__level == 2:
-                self.image = pygame.image.load("Blue Sprites/bullethorizontal.png")
+                self.image = pygame.image.load(resource_path("sprites/Blue Sprites/bullethorizontal.png"))
         else:
             if self.__level == 1:
-                self.image = pygame.image.load("Green Sprites/greenbullet.png")
+                self.image = pygame.image.load(resource_path("sprites/Green Sprites/greenbullet.png"))
             elif self.__level == 2:
-                self.image = pygame.image.load("Blue Sprites/bullet.png")
+                self.image = pygame.image.load(resource_path("sprites/Blue Sprites/bullet.png"))
 
         self.rect = self.image.get_rect()
         self.rect.center = self.__center
@@ -241,13 +253,13 @@ class Centipede(pygame.sprite.Sprite):
         if self.__level == 1:
             for num in range(1, 9):
                 if self.__level == 1:
-                    self.__animate_head.append(pygame.image.load("Green Sprites/greenhead"+str(num)+".png"))
-                    self.__animate_body.append(pygame.image.load("Green Sprites/greenbody"+str(num)+".png"))
+                    self.__animate_head.append(pygame.image.load(resource_path("sprites/Green Sprites/greenhead"+str(num)+".png")))
+                    self.__animate_body.append(pygame.image.load(resource_path("sprites/Green Sprites/greenbody"+str(num)+".png")))
             self.__dx = -2
         elif self.__level == 2:
             for num in range(1, 9):
-                self.__animate_head.append(pygame.image.load("Blue Sprites/head"+str(num)+".png"))
-                self.__animate_body.append(pygame.image.load("Blue Sprites/body"+str(num)+".png"))
+                self.__animate_head.append(pygame.image.load(resource_path("sprites/Blue Sprites/head"+str(num)+".png")))
+                self.__animate_body.append(pygame.image.load(resource_path("sprites/Blue Sprites/body"+str(num)+".png")))
             self.__dx = -4
 
         # Sets the image and point value for the centipede
@@ -357,11 +369,15 @@ class Mushroom(pygame.sprite.Sprite):
         # Colour of the sprites are different depending on level
         if self.__level == 1:
             for num in range(1, 5):
-                self.__phase.append(pygame.image.load("Green Sprites/greenmushroom"+str(num)+".png"))
+                self.__phase.append(pygame.image.load(resource_path("sprites/Green Sprites/greenmushroom"+str(num)+".png")))
+            # for num in range(0, 4):
+                # self.__phase.append(pygame.image.load(resource_path"sprites/asteroid_gray/sprite_"+str(num)+".png"))
 
         elif self.__level == 2:
             for num in range(1, 5):
-                self.__phase.append(pygame.image.load("Blue Sprites/mushroom"+str(num)+".png"))
+                self.__phase.append(pygame.image.load(resource_path("sprites/Blue Sprites/mushroom"+str(num)+".png")))
+            # for num in range(0, 4):
+                # self.__phase.append(pygame.image.load(resource_path"sprites/asteroid_white/sprite_"+str(num)+".png"))
 
         # Sets the x,y coordinate for the mushroom (rounds to a multiple of 16)
         if self.__x == 0 and self.__y == 0:
@@ -412,7 +428,7 @@ class Mushroom(pygame.sprite.Sprite):
         self.__level = 2
         self.__phase = []
         for num in range(1, 5):
-            self.__phase.append(pygame.image.load("Blue Sprites/mushroom" + str(num) + ".png"))
+            self.__phase.append(pygame.image.load(resource_path("sprites/Blue Sprites/mushroom" + str(num) + ".png")))
 
         self.image = self.__phase[0]
 
@@ -444,13 +460,13 @@ class Spider(pygame.sprite.Sprite):
         # Loads each spider image
         if self.__level == 1:
             for num in range(1, 9):
-                self.__animate.append(pygame.image.load("Green Sprites/greenspider"+str(num)+".png"))
+                self.__animate.append(pygame.image.load(resource_path("sprites/Green Sprites/greenspider"+str(num)+".png")))
             self.__dy = 2
             self.__dx = random.randrange(2, 4)
 
         elif self.__level == 2:
             for num in range(1, 9):
-                self.__animate.append(pygame.image.load("Blue Sprites/spider" + str(num) + ".png"))
+                self.__animate.append(pygame.image.load(resource_path("sprites/Blue Sprites/spider" + str(num) + ".png")))
             self.__dy = 4
             self.__dx = random.randrange(3, 5)
 
@@ -509,14 +525,14 @@ class Point(pygame.sprite.Sprite):
 
         # Colour of the sprites are different depending on level
         if self.__level == 1:
-            self.__300 = pygame.image.load("Green Sprites/green300.png")
-            self.__600 = pygame.image.load("Green Sprites/green600.png")
-            self.__900 = pygame.image.load("Green Sprites/green900.png")
+            self.__300 = pygame.image.load(resource_path("sprites/Green Sprites/green300.png"))
+            self.__600 = pygame.image.load(resource_path("sprites/Green Sprites/green600.png"))
+            self.__900 = pygame.image.load(resource_path("sprites/Green Sprites/green900.png"))
 
         elif self.__level == 2:
-            self.__300 = pygame.image.load("Blue Sprites/300.png")
-            self.__600 = pygame.image.load("Blue Sprites/600.png")
-            self.__900 = pygame.image.load("Blue Sprites/900.png")
+            self.__300 = pygame.image.load(resource_path("sprites/Blue Sprites/300.png"))
+            self.__600 = pygame.image.load(resource_path("sprites/Blue Sprites/600.png"))
+            self.__900 = pygame.image.load(resource_path("sprites/Blue Sprites/900.png"))
 
         # Instance variables to control the speed at which the image changes
         self.__last = pygame.time.get_ticks()
@@ -562,7 +578,7 @@ class Flea(pygame.sprite.Sprite):
 
         # Loads each flea image
         for num in range(1, 5):
-            self.__animate.append(pygame.image.load("Blue Sprites/flea"+str(num)+".png"))
+            self.__animate.append(pygame.image.load(resource_path("sprites/Blue Sprites/flea"+str(num)+".png")))
 
         # Instance variables to control the speed at which the image changes
         self.__last = pygame.time.get_ticks()
@@ -621,7 +637,7 @@ class ScoreKeeper(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
 
         # Instance variable to keep track of the font, score, level and colour
-        self.__font = pygame.font.Font("ARCADECLASSIC.TTF", 30)
+        self.__font = pygame.font.SysFont(font_name, 30)
         self.__score = 0
         self.__colour = (255, 0, 0)
         
@@ -656,7 +672,7 @@ class Lives(pygame.sprite.Sprite):
         self.__right = left
 
         # Sets the image and rect attributes for the life counter
-        self.image = pygame.image.load("Green Sprites/greengun.png")
+        self.image = pygame.image.load(resource_path("sprites/Green Sprites/greengun.png"))
         self.rect = self.image.get_rect()
 
         self.rect.top = 0
@@ -664,7 +680,7 @@ class Lives(pygame.sprite.Sprite):
 
     def change_level(self):
         '''This method changes the colour of the life sprites.'''
-        self.image = pygame.image.load("Blue Sprites/gun.png")
+        self.image = pygame.image.load(resource_path("sprites/Blue Sprites/gun.png"))
 
 class Highscore(pygame.sprite.Sprite):
     '''This class defines the sprite for the highscore.'''
@@ -676,10 +692,10 @@ class Highscore(pygame.sprite.Sprite):
         # Instance variables to keep track of the highscore and font
         self.__highscore = 0
         self.__colour = (255, 0, 0)
-        self.__font = pygame.font.Font("ARCADECLASSIC.TTF", 30) 
+        self.__font = pygame.font.SysFont(font_name, 30) 
 
         # Opens the highscore.txt file and gets the highest score
-        infile = open("highscore.txt", 'r')
+        infile = open(resource_path("highscore.txt"), 'r')
         for num in infile:
             num = int(num)
             if num >= self.__highscore:
@@ -727,17 +743,24 @@ class PowerUp(pygame.sprite.Sprite):
     def __load_frames(self):
         '''Load all available frames for the power-up type.'''
         i = 0
+        frames_found = False
         while True:
-            frame_path = f"PowerUps/{self.__type}_{i}.png"
-            if os.path.exists(frame_path):
-                frame = pygame.image.load(frame_path)
+            frame_path = f"sprites/PowerUps/{self.__type}_{i}.png"
+            if os.path.exists(resource_path(frame_path)):
+                frame = pygame.image.load(resource_path(frame_path))
                 self.__animate.append(frame)
+                frames_found = True  # Mark that at least one frame was found
                 i += 1
             else:
-                break
+                # If no frame found for index 0, stop entirely (no frames for power-up)
+                if i == 0:
+                    break
+                else:
+                    # If at least one frame was found but further frames are missing, stop the loop
+                    break
         
         if not self.__animate:
-            raise ValueError(f"No frames found for power-up type: {self.__type}")
+            raise ValueError(f"No frames found for power-up type: {self.__type}, {frame_path}")
 
     
     def get_type(self):

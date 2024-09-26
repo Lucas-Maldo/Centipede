@@ -1,7 +1,18 @@
 # I - IMPORT AND INITIALIZE
-import pygame, GameSprites, random
+import pygame, GameSprites, random, sys, os
 pygame.init()
 pygame.mixer.init()
+length = 640
+height = 480
+font_name = "Verdana"
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS  # When packaged by PyInstaller
+    except AttributeError:
+        base_path = os.path.abspath(".")  # When running as a script
+
+    return os.path.join(base_path, relative_path)
 
 def game():
     '''This function defines the game.'''
@@ -9,7 +20,7 @@ def game():
     # DISPLAY
     screen = pygame.display.set_mode((640, 480))
     pygame.display.set_caption("Centipede")
-    pygame.display.set_icon(pygame.image.load("mushroom_icon.png"))
+    pygame.display.set_icon(pygame.image.load(resource_path("sprites/mushroom_icon.png")))
 
     # ENTITIES
     background = pygame.Surface(screen.get_size())
@@ -59,24 +70,25 @@ def game():
         highscore, lifeGroup, mushroomGroup, bullets, spiderGroup, fleaGroup, powerupGroup)
     
     # "Game Over" Image to display after game loop terminates
-    font = pygame.font.Font("ARCADECLASSIC.TTF", 100)
+    font = pygame.font.SysFont(font_name, 80)
+    smallfont = pygame.font.SysFont(font_name, 30)
     gameover = font.render("Game Over", 1, (255, 255, 255))
     
     # Background Music
-    pygame.mixer.music.load("Sound/background music.mp3")
+    pygame.mixer.music.load(resource_path("Sound/background music.mp3"))
     pygame.mixer.music.set_volume(0.5)
     pygame.mixer.music.play(-1)
     
     # Sound Effect when the player shoots a bullet
-    shoot = pygame.mixer.Sound("Sound/270343__littlerobotsoundfactory__shoot-01.wav")
+    shoot = pygame.mixer.Sound(resource_path("Sound/270343__littlerobotsoundfactory__shoot-01.wav"))
     shoot.set_volume(0.2)    
     
     # Sound Effect when the player dies
-    dead = pygame.mixer.Sound("Sound/dead.wav")
+    dead = pygame.mixer.Sound(resource_path("Sound/dead.wav"))
     dead.set_volume(0.2)    
     
     # Sound Effect when the player kills an enemy
-    killed = pygame.mixer.Sound("Sound/270306__littlerobotsoundfactory__explosion-02.wav")
+    killed = pygame.mixer.Sound(resource_path("Sound/270306__littlerobotsoundfactory__explosion-02.wav"))
     killed.set_volume(0.2)
 
     # Creates a timer event for the spider enemy
@@ -87,9 +99,22 @@ def game():
     # ASSIGN 
     clock = pygame.time.Clock()
     keepGoing = True
+    paused = False
     death = False
     # Hide the mouse pointer
     pygame.mouse.set_visible(False)
+
+    pause_text1 = font.render("Paused", True, (255, 255, 255))
+    pause_text2 = smallfont.render("Press p to unpause", True, (255, 255, 255))
+
+    # Define the position of the text
+    pause_rect1 = pause_text1.get_rect(center=(length/2, 220))
+    pause_rect2 = pause_text2.get_rect(center=(length/2, 280))
+
+    # Function to redraw the area where the pause text was
+    def redraw_game_area():
+        pygame.draw.rect(screen, (0, 0, 0), pause_rect1)
+        pygame.draw.rect(screen, (0, 0, 0), pause_rect2)
  
     # LOOP
     while keepGoing:
@@ -99,6 +124,9 @@ def game():
 
         # EVENT HANDLING: 
         for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_p:
+                    paused = not paused
             if event.type == pygame.QUIT:
                 keepGoing = False
             elif event.type == pygame.USEREVENT+1:
@@ -113,215 +141,184 @@ def game():
                     fleaGroup.add(flea)
                     allSprites.add(fleaGroup)
 
-        # If statement checks if the player has been killed
-        if death == False:
-            pressed  = pygame.key.get_pressed()
-            if pressed[pygame.K_UP]:
-                player.move_up()
-            elif pressed[pygame.K_DOWN]:
-                player.move_down()
-            elif pressed[pygame.K_RIGHT]:
-                player.move_right()
-            elif pressed[pygame.K_LEFT]:
-                player.move_left()
-            # Checks if the player pressed the spacebar and no other bullets are on the screen   
-            if pressed[pygame.K_SPACE] and player.can_shoot():
-                shoot.play()
-                new_bullets = player.shoot()
-                bullets.add(new_bullets)
-                allSprites.add(new_bullets)          
-          
-        # Centipede with Player Collision
-        for body in bodyGroup:
-            if body.rect.colliderect(player):
+        if(not paused):
+            redraw_game_area()
+            # If statement checks if the player has been killed
+            if death == False:
+                pressed  = pygame.key.get_pressed()
+                if pressed[pygame.K_UP]:
+                    player.move_up()
+                elif pressed[pygame.K_DOWN]:
+                    player.move_down()
+                elif pressed[pygame.K_RIGHT]:
+                    player.move_right()
+                elif pressed[pygame.K_LEFT]:
+                    player.move_left()
+                # Checks if the player pressed the spacebar and no other bullets are on the screen   
+                if pressed[pygame.K_SPACE] and player.can_shoot():
+                    shoot.play()
+                    new_bullets = player.shoot()
+                    bullets.add(new_bullets)
+                    allSprites.add(new_bullets)          
+            
+            # Centipede with Player Collision
+            for body in bodyGroup:
+                if body.rect.colliderect(player):
+                    dead.play()
+                    death = True
+                    player.set_killed()
+            
+            # Centipede with Mushroom Collision
+            for body in bodyGroup:
+                if pygame.sprite.spritecollide(body, mushroomGroup, False):
+                    body.change_movement()
+                    if pygame.sprite.spritecollide(body, mushroomGroup, False):
+                        body.change_direction()
+            
+            # Bullet with Centipede Collision
+            for bullet in bullets:
+                centipede_hit = pygame.sprite.spritecollide(bullet, bodyGroup, True)
+
+                    
+                if centipede_hit:
+                    # Loops through each centipede part in the centipede_hit list
+                    for centipede in centipede_hit:
+                        killed.play()
+                        
+                        # Call hit() on the other centipede parts that are still in the game
+                        for part in bodyGroup:
+                            part.hit()  # This ensures all remaining centipede parts speed up
+                            
+                        # Creates a mushroom in place of the killed centipede body
+                        mushroom = GameSprites.Mushroom(centipede.rect.topleft, level)
+                        mushroomGroup.add(mushroom)
+                        allSprites.add(mushroomGroup)
+                        # Adds the point value of the centipede body to the score
+                        scorekeeper.add_score(centipede.get_point_value())
+                        if not bullet.is_penetrating():
+                            bullet.kill()
+                                
+            # Bullet with Mushroom Collision
+            for bullet in bullets:
+                mushroom_hit = pygame.sprite.spritecollide(bullet, mushroomGroup, False)
+                if mushroom_hit:
+                    mushroom_hit[0].mushroom_hitpoint()
+                    mushroom_hit[0].mushroom_kill(mushroom_hit[0])
+                    if mushroom_hit[0].get_hitpoint() == 0:
+                        killed.play()
+                        scorekeeper.add_score(mushroom_hit[0].get_point_value())
+                        # Chance to spawn a power-up
+                        if random.random() < 0.7:  # 10% chance
+                            powerup = GameSprites.PowerUp(mushroom_hit[0].rect.center)
+                            powerupGroup.add(powerup)
+                            allSprites.add(powerup)
+                    
+                    if not bullet.is_penetrating():
+                        bullet.kill()
+
+
+            # Player with Mushroom Collision
+            player_mushroom_hit = pygame.sprite.spritecollide(player, mushroomGroup, False)
+            if player_mushroom_hit:
+                # Player with Mushroom left Collision
+                if player.rect.collidepoint(player_mushroom_hit[0].rect.midleft) == True:
+                    player.rect.right = player_mushroom_hit[0].rect.left 
+                    
+                # Player with Mushroom right Collision    
+                if player.rect.collidepoint(player_mushroom_hit[0].rect.midright) == True:
+                    player.rect.left = player_mushroom_hit[0].rect.right
+                    
+                # Player with Mushroom top Collision    
+                if player.rect.collidepoint(player_mushroom_hit[0].rect.midtop) == True:
+                    player.rect.bottom = player_mushroom_hit[0].rect.top
+                    
+                # Player with Mushroom bot Collision    
+                if player.rect.collidepoint(player_mushroom_hit[0].rect.midbottom) == True:
+                    player.rect.top = player_mushroom_hit[0].rect.bottom
+            
+            # Player with Spider Collision
+            player_spider_hit = pygame.sprite.spritecollide(player, spiderGroup, True)
+            if player_spider_hit:
                 dead.play()
                 death = True
                 player.set_killed()
-        
-        # Centipede with Mushroom Collision
-        for body in bodyGroup:
-            if pygame.sprite.spritecollide(body, mushroomGroup, False):
-                body.change_movement()
-                if pygame.sprite.spritecollide(body, mushroomGroup, False):
-                    body.change_direction()
-        
-        # Bullet with Centipede Collision
-        for bullet in bullets:
-            centipede_hit = pygame.sprite.spritecollide(bullet, bodyGroup, True)
-
-                
-            if centipede_hit:
-                # Loops through each centipede part in the centipede_hit list
-                for centipede in centipede_hit:
+            
+            # Bullet with Spider Collision
+            for bullet in bullets:
+                spider_hit = pygame.sprite.spritecollide(bullet, spiderGroup, True)
+                if spider_hit:
                     killed.play()
-                    
-                    # Call hit() on the other centipede parts that are still in the game
-                    for part in bodyGroup:
-                        part.hit()  # This ensures all remaining centipede parts speed up
-                        
-                    # Creates a mushroom in place of the killed centipede body
-                    mushroom = GameSprites.Mushroom(centipede.rect.topleft, level)
-                    mushroomGroup.add(mushroom)
-                    allSprites.add(mushroomGroup)
-                    # Adds the point value of the centipede body to the score
-                    scorekeeper.add_score(centipede.get_point_value())
-                    if not bullet.is_penetrating():
-                        bullet.kill()
-                            
-        # Bullet with Mushroom Collision
-        for bullet in bullets:
-            mushroom_hit = pygame.sprite.spritecollide(bullet, mushroomGroup, False)
-            if mushroom_hit:
-                mushroom_hit[0].mushroom_hitpoint()
-                mushroom_hit[0].mushroom_kill(mushroom_hit[0])
-                if mushroom_hit[0].get_hitpoint() == 0:
-                    killed.play()
-                    scorekeeper.add_score(mushroom_hit[0].get_point_value())
-                    # Chance to spawn a power-up
-                    if random.random() < 0.7:  # 10% chance
-                        powerup = GameSprites.PowerUp(mushroom_hit[0].rect.center)
-                        powerupGroup.add(powerup)
-                        allSprites.add(powerup)
-                
-                if not bullet.is_penetrating():
+                    # Kills the bullet sprite
                     bullet.kill()
+                    # Adds the point value of the spider to the score
+                    scorekeeper.add_score(spider_hit[0].get_point_value())
+                    point = GameSprites.Point(spider_hit[0].get_point_value(), spider_hit[0].rect.center, level)
+                    allSprites.add(point)
 
-
-        # Player with Mushroom Collision
-        player_mushroom_hit = pygame.sprite.spritecollide(player, mushroomGroup, False)
-        if player_mushroom_hit:
-            # Player with Mushroom left Collision
-            if player.rect.collidepoint(player_mushroom_hit[0].rect.midleft) == True:
-                player.rect.right = player_mushroom_hit[0].rect.left 
+            # Player with Flea Collision
+            player_flea_hit = pygame.sprite.spritecollide(player, fleaGroup, True)
+            if player_spider_hit:
+                dead.play()
+                death = True
+                player.set_killed()
                 
-            # Player with Mushroom right Collision    
-            if player.rect.collidepoint(player_mushroom_hit[0].rect.midright) == True:
-                player.rect.left = player_mushroom_hit[0].rect.right
-                
-            # Player with Mushroom top Collision    
-            if player.rect.collidepoint(player_mushroom_hit[0].rect.midtop) == True:
-                player.rect.bottom = player_mushroom_hit[0].rect.top
-                
-            # Player with Mushroom bot Collision    
-            if player.rect.collidepoint(player_mushroom_hit[0].rect.midbottom) == True:
-                player.rect.top = player_mushroom_hit[0].rect.bottom
-        
-        # Player with Spider Collision
-        player_spider_hit = pygame.sprite.spritecollide(player, spiderGroup, True)
-        if player_spider_hit:
-            dead.play()
-            death = True
-            player.set_killed()
-        
-        # Bullet with Spider Collision
-        for bullet in bullets:
-            spider_hit = pygame.sprite.spritecollide(bullet, spiderGroup, True)
-            if spider_hit:
-                killed.play()
-                # Kills the bullet sprite
-                bullet.kill()
-                # Adds the point value of the spider to the score
-                scorekeeper.add_score(spider_hit[0].get_point_value())
-                point = GameSprites.Point(spider_hit[0].get_point_value(), spider_hit[0].rect.center, level)
-                allSprites.add(point)
-
-        # Player with Flea Collision
-        player_flea_hit = pygame.sprite.spritecollide(player, fleaGroup, True)
-        if player_spider_hit:
-            dead.play()
-            death = True
-            player.set_killed()
-            
-        # Player with PowerUp Collision
-        powerup_hit = pygame.sprite.spritecollide(player, powerupGroup, True)
-        if powerup_hit:
-            powerup_type = powerup_hit[0].get_type()
-            powerup_duration = powerup_hit[0].get_duration()
-            if powerup_type == 'speed':
-                player.set_speed_boost(powerup_duration)
-            if powerup_type == 'rapid_fire':
-                player.set_rapid_fire(powerup_duration)
-            elif powerup_type == 'multi_directional':
-                player.set_multi_directional(powerup_duration)
-            elif powerup_type == 'penetrating':
-                player.set_penetrating(powerup_duration)
+            # Player with PowerUp Collision
+            powerup_hit = pygame.sprite.spritecollide(player, powerupGroup, True)
+            if powerup_hit:
+                powerup_type = powerup_hit[0].get_type()
+                powerup_duration = powerup_hit[0].get_duration()
+                if powerup_type == 'speed':
+                    player.set_speed_boost(powerup_duration)
+                if powerup_type == 'rapid_fire':
+                    player.set_rapid_fire(powerup_duration)
+                elif powerup_type == 'multi_directional':
+                    player.set_multi_directional(powerup_duration)
+                elif powerup_type == 'penetrating':
+                    player.set_penetrating(powerup_duration)
 
 
-        # Bullet with Flea Collision
-        for bullet in bullets:
-            flea_hit = pygame.sprite.spritecollide(bullet, fleaGroup, False)
-            if flea_hit:
-                flea_hit[0].flea_hit()
-                # Kills the bullet sprite
-                bullet.kill()
-                if flea_hit[0].get_hitpoint() == 0:
-                    killed.play()
-                    flea_hit[0].kill()
-                    # Adds the point value of the flea to the score
-                    scorekeeper.add_score(flea_hit[0].get_point_value())
+            # Bullet with Flea Collision
+            for bullet in bullets:
+                flea_hit = pygame.sprite.spritecollide(bullet, fleaGroup, False)
+                if flea_hit:
+                    flea_hit[0].flea_hit()
+                    # Kills the bullet sprite
+                    bullet.kill()
+                    if flea_hit[0].get_hitpoint() == 0:
+                        killed.play()
+                        flea_hit[0].kill()
+                        # Adds the point value of the flea to the score
+                        scorekeeper.add_score(flea_hit[0].get_point_value())
 
-        # Creates Mushrooms based on where the flea is except for the last row
-        for flea in fleaGroup:
-            if flea.rect.bottom % 16 == 0 and not (464 <= flea.rect.bottom <= 480):
-                mushroom = GameSprites.Mushroom(flea.rect.bottomleft, 2)
-                flea_mushroomGroup.add(mushroom)
-                mushroomGroup.add(flea_mushroomGroup)
-                allSprites.add(flea_mushroomGroup)
-
-        # Checks if the player is not in any sprite groups
-        if player.alive() == False:
-            # Player loses a life
-            lives[len(lifeGroup)-1].kill()
-            
-            # Creates a new player sprite
-            player = GameSprites.Player(screen, False, level)
-
-            # Remove all enemies
-            for body in bodyGroup:
-                body.kill()
-  
-            for spider in spiderGroup:
-                spider.kill()
-
+            # Creates Mushrooms based on where the flea is except for the last row
             for flea in fleaGroup:
-                flea.kill()
-            
-            # Remove mushrooms created by flea
-            for mushroom in flea_mushroomGroup:
-                mushroom.kill()                
+                if flea.rect.bottom % 16 == 0 and not (464 <= flea.rect.bottom <= 480):
+                    mushroom = GameSprites.Mushroom(flea.rect.bottomleft, 2)
+                    flea_mushroomGroup.add(mushroom)
+                    mushroomGroup.add(flea_mushroomGroup)
+                    allSprites.add(flea_mushroomGroup)
 
-            # Creates a new Centipede
-            right = 0
-            for x in range(8):
-                body = GameSprites.Centipede(screen, right, x, level)
-                bodyGroup.add(body)
-                right += 16
-
-            allSprites.add(player, bodyGroup)
-            death = False
-
-        # If the centipede is killed, level is increased
-        if len(bodyGroup) == 0:
-            level += 1
-
-            if level == 2:
-                # Adds a life 
-                life = GameSprites.Lives(left)
-                lives.append(life)
-                lifeGroup.add(life)
+            # Checks if the player is not in any sprite groups
+            if player.alive() == False:
+                # Player loses a life
+                lives[len(lifeGroup)-1].kill()
                 
-                # Changes the colour of the sprites
-                player.kill()
-                player.change_level()
+                # Creates a new player sprite
+                player = GameSprites.Player(screen, False, level)
 
-                for mushroom in mushroomGroup:
-                    mushroom.change_level()
+                # Remove all enemies
+                for body in bodyGroup:
+                    body.kill()
+    
+                for spider in spiderGroup:
+                    spider.kill()
+
+                for flea in fleaGroup:
+                    flea.kill()
                 
-                for life in lifeGroup:
-                    life.change_level()
-                    
-                scorekeeper.change_level()
-                highscore.change_level()
+                # Remove mushrooms created by flea
+                for mushroom in flea_mushroomGroup:
+                    mushroom.kill()                
 
                 # Creates a new Centipede
                 right = 0
@@ -329,21 +326,60 @@ def game():
                     body = GameSprites.Centipede(screen, right, x, level)
                     bodyGroup.add(body)
                     right += 16
+
+                allSprites.add(player, bodyGroup)
+                death = False
+
+            # If the centipede is killed, level is increased
+            if len(bodyGroup) == 0:
+                level += 1
+
+                if level == 2:
+                    # Adds a life 
+                    life = GameSprites.Lives(left)
+                    lives.append(life)
+                    lifeGroup.add(life)
                     
-                allSprites.add(bodyGroup)
+                    # Changes the colour of the sprites
+                    player.kill()
+                    player.change_level()
 
-        # If there are are no sprites in the lifeGroup and the level is 3, 
-        # append the score to the highscore.txt file and stop the gaming loop
-        if len(lifeGroup) == 0 or level == 3:
-            infile = open("highscore.txt", 'a')
-            infile.write(str(scorekeeper.get_score())+ "\n")
-            infile.close()
-            keepGoing = False
+                    for mushroom in mushroomGroup:
+                        mushroom.change_level()
+                    
+                    for life in lifeGroup:
+                        life.change_level()
+                        
+                    scorekeeper.change_level()
+                    highscore.change_level()
 
-        # REFRESH SCREEN
-        allSprites.clear(screen, background)
-        allSprites.update()
-        allSprites.draw(screen)       
+                    # Creates a new Centipede
+                    right = 0
+                    for x in range(8):
+                        body = GameSprites.Centipede(screen, right, x, level)
+                        bodyGroup.add(body)
+                        right += 16
+                        
+                    allSprites.add(bodyGroup)
+
+            # If there are are no sprites in the lifeGroup and the level is 3, 
+            # append the score to the highscore.txt file and stop the gaming loop
+            if len(lifeGroup) == 0 or level == 3:
+                infile = open(resource_path("highscore.txt"), 'a')
+                infile.write(str(scorekeeper.get_score())+ "\n")
+                infile.close()
+                keepGoing = False
+
+            # REFRESH SCREEN
+            allSprites.clear(screen, background)
+            allSprites.update()
+            allSprites.draw(screen)    
+
+        if(paused):
+            # Display a pause message or overlay
+            screen.blit(pause_text1, pause_rect1)
+            screen.blit(pause_text2, pause_rect2)    
+
         pygame.display.flip()
         
     # Display "Game Over" graphic and fade out background music
@@ -361,7 +397,7 @@ def game_menu():
     # DISPLAY
     screen = pygame.display.set_mode((640, 480))
     pygame.display.set_caption("Centipede")
-    pygame.display.set_icon(pygame.image.load("mushroom_icon.png"))
+    pygame.display.set_icon(pygame.image.load(resource_path("sprites/mushroom_icon.png")))
     
     # ENTITIES
     background = pygame.Surface(screen.get_size())
@@ -369,15 +405,22 @@ def game_menu():
     background = pygame.transform.scale(background, (640, 480))
     background.fill((0, 0, 0))
     
-    title_font = pygame.font.Font("ARCADECLASSIC.TTF", 100)
-    font = pygame.font.Font("ARCADECLASSIC.TTF", 60)
+    title_font = pygame.font.SysFont(font_name, 100)
+    font = pygame.font.SysFont(font_name, 60)
+    tinyfont = pygame.font.SysFont(font_name, 15)
     
     title_label = title_font.render("Centipede", 1, (255, 255, 255))
     play_label = font.render("Play", 1, (0, 0, 0))
     quit_label = font.render("Quit", 1, (0, 0, 0))
+
+    controls_text = [
+        "Arrow  keys  to  Move",
+        "Space  to  Shoot",
+        "P  to  Pause"
+    ]
     
     # Background Music
-    pygame.mixer.music.load("Sound/menu music.mp3")
+    pygame.mixer.music.load(resource_path("Sound/menu music.mp3"))
     pygame.mixer.music.set_volume(0.5)
     pygame.mixer.music.play(-1)
     
@@ -411,6 +454,10 @@ def game_menu():
         screen.blit(title_label, (70, 70))
         screen.blit(play_label, (140, 240))
         screen.blit(quit_label, (365, 240))
+        y_offset = height - (len(controls_text) * 40 + 10)  # Start from bottom-left corner with some margin
+        for i, line in enumerate(controls_text):
+            control_line = tinyfont.render(line, True, (255, 255, 255))
+            screen.blit(control_line, (10, y_offset + i * 40))
         pygame.display.flip()
 
 def play_button(background):
